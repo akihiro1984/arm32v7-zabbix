@@ -1,0 +1,57 @@
+version: '3.7'
+
+volumes:
+    db_volume:
+
+services:
+    zabbix_agent_host:
+        build:
+            context: ./zabbix-agent-host
+        privileged: true
+        environment:
+            ZBX_STARTAGENTS: 1
+            ZBX_SERVER_HOST: core.zabbix.server
+            ZBX_PASSIVE_ALLOW: "true"
+            ZBX_ACTIVE_ALLOW: "true"
+            DEBUG_MODE: "false"
+            ZBX_REFRESHACTIVECHECKS: 60
+            ZBX_DEBUGLEVEL: 1
+        volumes:
+            - ./zabbix-agent-host/etc/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d
+            - ./zabbix-agent-host/var/lib/zabbix/modules:/var/lib/zabbix/modules
+            - ./zabbix-agent-host/var/lib/zabbix/enc:/var/lib/zabbix/enc
+        links:
+            - zabbix_core:core.zabbix.server
+
+    zabbix_core:
+        build:
+            context: ./zabbix-server
+        environment:
+            DB_SERVER_HOST: db.zabbix.server
+            MYSQL_ROOT_PASSWORD: root
+            TZ: Asia/Tokyo
+        links:
+            - db:db.zabbix.server
+    zabbix_web:
+        build:
+            context: ./zabbix-web-nginx
+        ports:
+            - 60080:80
+            - 60443:443
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            DB_SERVER_HOST: db.zabbix.server
+            ZBX_SERVER_HOST: core.zabbix.server
+            PHP_TZ: Asia/Tokyo
+        links:
+            - db:db.zabbix.server
+            - zabbix_core:core.zabbix.server
+
+    db:
+        image: linuxserver/mariadb:arm32v7-latest
+        ports:
+            - 3306:3306
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+        volumes:
+            - db_volume:/config
