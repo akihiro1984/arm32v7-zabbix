@@ -1,57 +1,78 @@
 version: '3.7'
 
 volumes:
-    db_volume:
+    database_volume:
 
 services:
     zabbix_agent_host:
         build:
             context: ./zabbix-agent-host
+            args:
+                - MAJOR_VERSION=4.4
+                - ZBX_VERSION=4.4.8
         privileged: true
+        init: true
         environment:
             ZBX_STARTAGENTS: 1
-            ZBX_SERVER_HOST: core.zabbix.server
+            ZBX_SERVER_HOST: zabbix_core
+            ZBX_ENABLEREMOTECOMMANDS: 1
             ZBX_PASSIVE_ALLOW: "true"
             ZBX_ACTIVE_ALLOW: "true"
             DEBUG_MODE: "false"
             ZBX_REFRESHACTIVECHECKS: 60
             ZBX_DEBUGLEVEL: 1
+            TZ: Asia/Tokyo
         volumes:
-            - ./zabbix-agent-host/etc/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d
-            - ./zabbix-agent-host/var/lib/zabbix/modules:/var/lib/zabbix/modules
-            - ./zabbix-agent-host/var/lib/zabbix/enc:/var/lib/zabbix/enc
-        links:
-            - zabbix_core:core.zabbix.server
+            - ./zabbix-agent-host/conf:/etc/zabbix/zabbix_agentd.d
+            - ./zabbix-agent-host/modules:/var/lib/zabbix/modules
+            - ./zabbix-agent-host/enc:/var/lib/zabbix/enc
+        entrypoint: "/usr/bin/docker-entrypoint.sh"
 
     zabbix_core:
         build:
             context: ./zabbix-server
+            args:
+                - MAJOR_VERSION=4.4
+                - ZBX_VERSION=4.4.8
+        init: true
         environment:
-            DB_SERVER_HOST: db.zabbix.server
+            DB_SERVER_HOST: sql_database
+            MYSQL_USER: zabbix
             MYSQL_ROOT_PASSWORD: root
+            PHP_TZ: Asia/Tokyo
             TZ: Asia/Tokyo
-        links:
-            - db:db.zabbix.server
+        ports:
+            - 10051:10051
+        depends_on: 
+            - sql_database
+        entrypoint: "/usr/bin/docker-entrypoint.sh"
+                
     zabbix_web:
         build:
             context: ./zabbix-web-nginx
+            args:
+                - MAJOR_VERSION=4.4
+                - ZBX_VERSION=4.4.8
         ports:
             - 60080:80
             - 60443:443
         environment:
+            DB_SERVER_HOST: sql_database
+            ZBX_SERVER_HOST: zabbix_core
+            ZBX_GRAPH_FONT_NAME: RMgHM
             MYSQL_ROOT_PASSWORD: root
-            DB_SERVER_HOST: db.zabbix.server
-            ZBX_SERVER_HOST: core.zabbix.server
             PHP_TZ: Asia/Tokyo
-        links:
-            - db:db.zabbix.server
-            - zabbix_core:core.zabbix.server
+            TZ: Asia/Tokyo
+        depends_on: 
+            - sql_database
+            - zabbix_core
+        entrypoint: "/usr/bin/docker-entrypoint.sh"
 
-    db:
-        image: linuxserver/mariadb:arm32v7-latest
-        ports:
-            - 3306:3306
+    sql_database:
+        image: yobasystems/alpine-mariadb:armhf
+        init: true
         environment:
+            TZ: Asia/Tokyo
             MYSQL_ROOT_PASSWORD: root
         volumes:
-            - db_volume:/config
+            - database_volume:/var/lib/mysql

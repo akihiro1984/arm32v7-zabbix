@@ -332,8 +332,7 @@ mysql_query() {
     query=$1
     local result=""
 
-    result=$(mysql --silent --skip-column-names -h ${DB_SERVER_HOST} -P ${DB_SERVER_PORT} \
-             -u ${DB_SERVER_ROOT_USER} --password="${DB_SERVER_ROOT_PASS}" -e "$query")
+    result=$(mysql --silent --skip-column-names -h ${DB_SERVER_HOST} -P ${DB_SERVER_PORT} -u ${DB_SERVER_ROOT_USER} --password="${DB_SERVER_ROOT_PASS}" -e "$query")
 
     echo $result
 }
@@ -353,8 +352,7 @@ psql_query() {
         export PGOPTIONS
     fi
 
-    result=$(psql -A -q -t  -h ${DB_SERVER_HOST} -p ${DB_SERVER_PORT} \
-             -U ${DB_SERVER_ROOT_USER} -c "$query" $db 2>/dev/null);
+    result=$(psql -A -q -t  -h ${DB_SERVER_HOST} -p ${DB_SERVER_PORT} -U ${DB_SERVER_ROOT_USER} -c "$query" $db 2>/dev/null);
 
     unset PGPASSWORD
     unset PGOPTIONS
@@ -429,20 +427,20 @@ create_db_schema_mysql() {
     fi
 
     if [ -z "${ZBX_DB_VERSION}" ]; then
-        echo "** Creating '${DB_SERVER_DBNAME}' schema in MySQL"
+        echo "** Creating '${DB_SERVER_DBNAME}' schema in MySQL, this may take a several minutes..."
 
         zcat /usr/share/doc/zabbix-$type-mysql/create.sql.gz | mysql --silent --skip-column-names \
-                    -h ${DB_SERVER_HOST} -P ${DB_SERVER_PORT} \
-                    -u ${DB_SERVER_ROOT_USER} --password="${DB_SERVER_ROOT_PASS}"  \
-                    ${DB_SERVER_DBNAME} 1>/dev/null
+            -h ${DB_SERVER_HOST} -P ${DB_SERVER_PORT} \
+            -u ${DB_SERVER_ROOT_USER} --password="${DB_SERVER_ROOT_PASS}" \
+            ${DB_SERVER_DBNAME} 1>/dev/null
+        echo "** Finished."
     fi
 }
 
 create_db_schema_postgresql() {
     local type=$1
 
-    DBVERSION_TABLE_EXISTS=$(psql_query "SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = 
-                                         c.relnamespace WHERE  n.nspname = '$DB_SERVER_SCHEMA' AND c.relname = 'dbversion'" "${DB_SERVER_DBNAME}")
+    DBVERSION_TABLE_EXISTS=$(psql_query "SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE  n.nspname = '$DB_SERVER_SCHEMA' AND c.relname = 'dbversion'" "${DB_SERVER_DBNAME}")
 
     if [ -n "${DBVERSION_TABLE_EXISTS}" ]; then
         echo "** Table '${DB_SERVER_DBNAME}.dbversion' already exists."

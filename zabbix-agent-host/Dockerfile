@@ -41,7 +41,6 @@ RUN set -eux && \
     make -j"$(nproc)" -s
 
 FROM arm32v7/alpine
-LABEL maintainer="Alexey Pustovalov <alexey.pustovalov@zabbix.com>"
 
 ARG BUILD_DATE
 ARG VCS_REF
@@ -69,10 +68,9 @@ RUN set -eux && \
     mkdir -p /var/lib/zabbix && \
     mkdir -p /var/lib/zabbix/enc && \
     mkdir -p /var/lib/zabbix/modules && \
-    chown --quiet -R zabbix:root /var/lib/zabbix && \
+    chown --quiet -R zabbix:zabbix /var/lib/zabbix && \
     apk update && \
     apk add ${APK_FLAGS_PERSISTENT} \
-            tini \
             bash \
             coreutils \
             iputils \
@@ -87,5 +85,3 @@ WORKDIR /var/lib/zabbix
 VOLUME ["/etc/zabbix/zabbix_agentd.d", "/var/lib/zabbix/enc", "/var/lib/zabbix/modules"]
 
 COPY ["docker-entrypoint.sh", "/usr/bin/"]
-
-ENTRYPOINT ["/sbin/tini", "--", "/usr/bin/docker-entrypoint.sh"]

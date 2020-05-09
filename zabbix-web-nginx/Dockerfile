@@ -71,17 +71,18 @@ RUN set -eux && \
     rm -f conf/zabbix.conf.php && \
     rm -rf tests && \
     ./locale/make_mo.sh && \
-    curl -L https://ipafont.ipa.go.jp/old/ipafont/IPAfont00303.php --output IPAfont00303.zip && \
-    unzip IPAfont00303.zip && \
-    mkdir -p /usr/share/fonts && \
-    mv IPAfont00303/*.ttf /usr/share/fonts && \
-    rm -rf IPAfont00303 && \
-    mkdir -p /etc/alternatives && \
-    ln -s /usr/share/fonts/ipagp.ttf /etc/alternatives/zabbix-web-font && \
     chown --quiet -R nginx:nginx /usr/share/zabbix && \
     apk del ${APK_FLAGS_COMMON} --purge \
             build-dependencies && \
     rm -rf /var/cache/apk/*
+
+RUN set -eux && \
+apk add p7zip && \
+cd /tmp && \
+wget http://yozvox.web.fc2.com/MoBoGa.7z && 7z x MoBoGa.7z && \
+mv MoBoGa/*.ttf /usr/share/zabbix/assets/fonts/ && \
+rm -rf MoBoGa.7z MoBoGa/ && \
+ls /usr/share/zabbix/assets/fonts/ 
 
 EXPOSE 80/TCP 443/TCP
 
@@ -97,5 +98,3 @@ COPY ["conf/etc/nginx/nginx.conf", "/etc/nginx/"]
 COPY ["conf/etc/php7/php-fpm.conf", "/etc/php7/"]
 COPY ["conf/etc/php7/conf.d/99-zabbix.ini", "/etc/php7/conf.d/"]
 COPY ["docker-entrypoint.sh", "/usr/bin/"]
-
-CMD ["docker-entrypoint.sh"]
